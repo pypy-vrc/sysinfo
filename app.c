@@ -1,18 +1,18 @@
 #include "pch.h"
 
 typedef struct _UNICODE_STRING {
-	USHORT Length;
-	USHORT MaximumLength;
-	PWCH Buffer;
+    USHORT Length;
+    USHORT MaximumLength;
+    PWCH Buffer;
 } UNICODE_STRING, *PUNICODE_STRING;
 
 typedef struct _OBJECT_ATTRIBUTES {
-	ULONG Length;
-	HANDLE RootDirectory;
-	PUNICODE_STRING ObjectName;
-	ULONG Attributes;
-	PVOID SecurityDescriptor;
-	PVOID SecurityQualityOfService;
+    ULONG Length;
+    HANDLE RootDirectory;
+    PUNICODE_STRING ObjectName;
+    ULONG Attributes;
+    PVOID SecurityDescriptor;
+    PVOID SecurityQualityOfService;
 } OBJECT_ATTRIBUTES;
 
 typedef LONG NTSTATUS;
@@ -63,37 +63,37 @@ typedef struct smbios {
 
 __declspec(naked) void __cdecl __cpuid(int *result, int code)
 {
-	__asm {
-		push ebx
-		push edi
-		mov edi, [esp + 12]
-		mov eax, [esp + 16]
-		cpuid
-		mov [edi], eax
-		mov [edi + 4], ebx
-		mov [edi + 8], ecx
-		mov [edi + 12], edx
-		pop edi
-		pop ebx
-		ret
-	}
+    __asm {
+        push ebx
+        push edi
+        mov edi, [esp + 12]
+        mov eax, [esp + 16]
+        cpuid
+        mov [edi], eax
+        mov [edi + 4], ebx
+        mov [edi + 8], ecx
+        mov [edi + 12], edx
+        pop edi
+        pop ebx
+        ret
+    }
 }
 
 void sysinfo_cpu(sysinfo_t *ctx, uint8_t *b)
 {
-	uint32_t crc;
+    uint32_t crc;
 
-	// Processor Brand String
-	printf("CPU\n");
+    // Processor Brand String
+    printf("CPU\n");
     __cpuid((int *)b, 0x80000002);
     dump(b, 16);
-	crc = crc32(0, b, 16);
-	__cpuid((int *)b, 0x80000003);
+    crc = crc32(0, b, 16);
+    __cpuid((int *)b, 0x80000003);
     dump(b, 16);
-	crc = crc32(crc, b, 16);
-	__cpuid((int *)b, 0x80000004);
+    crc = crc32(crc, b, 16);
+    __cpuid((int *)b, 0x80000004);
     dump(b, 16);
-	ctx->cpu_crc = crc32(crc, b, 16);
+    ctx->cpu_crc = crc32(crc, b, 16);
 }
 
 void sysinfo_os(sysinfo_t *ctx, uint8_t *b)
@@ -104,8 +104,8 @@ void sysinfo_os(sysinfo_t *ctx, uint8_t *b)
     ctx->nt_minor_version = *(uint16_t *)0x7FFE0270; // USER_SHARED_DATA->NtMinorVersion
 
     p = (uint8_t *)NtCurrentTeb();
-	p = *(uint8_t **)&p[sizeof(p) * 12]; // TEB->PEB
-	ctx->os_build_number = *(uint16_t *)&p[0xAC]; // OSBuildNumber
+    p = *(uint8_t **)&p[sizeof(p) * 12]; // TEB->PEB
+    ctx->os_build_number = *(uint16_t *)&p[0xAC]; // OSBuildNumber
 
     p = *(void **)&p[0x58]; // AnsiCodePageData
     if (p) {
@@ -116,9 +116,9 @@ void sysinfo_os(sysinfo_t *ctx, uint8_t *b)
 void sysinfo_storage(sysinfo_t *ctx, sha1_t *sha1, uint8_t *b)
 {
     HMODULE m;
-	HANDLE file;
-	UNICODE_STRING us;
-	OBJECT_ATTRIBUTES oa;
+    HANDLE file;
+    UNICODE_STRING us;
+    OBJECT_ATTRIBUTES oa;
     IO_STATUS_BLOCK iob;
     uint32_t offset;
 
@@ -128,22 +128,22 @@ void sysinfo_storage(sysinfo_t *ctx, sha1_t *sha1, uint8_t *b)
     }
 
     // Device: "\\??\\C:"
-	((int *)b)[0] = 0x3F005C;
-	((int *)b)[1] = 0x5C003F;
-	((int *)b)[2] = 0x3A003F;
-	*(short *)&b[8] = *(short *)0x7FFE0030; // USER_SHARED_DATA->NtSystemRoot
+    ((int *)b)[0] = 0x3F005C;
+    ((int *)b)[1] = 0x5C003F;
+    ((int *)b)[2] = 0x3A003F;
+    *(short *)&b[8] = *(short *)0x7FFE0030; // USER_SHARED_DATA->NtSystemRoot
 
-	us.Buffer = (void *)b;
-	us.MaximumLength = us.Length = 12;
+    us.Buffer = (void *)b;
+    us.MaximumLength = us.Length = 12;
 
     oa.Length = sizeof(oa);
     oa.RootDirectory = NULL;
-	oa.ObjectName = &us;
-	oa.Attributes = 0xC0; // OBJ_CASE_INSENSITIVE(0x40) | OBJ_OPENIF(0x80)
+    oa.ObjectName = &us;
+    oa.Attributes = 0xC0; // OBJ_CASE_INSENSITIVE(0x40) | OBJ_OPENIF(0x80)
     oa.SecurityDescriptor = NULL;
     oa.SecurityQualityOfService = NULL;
 
-	if (GetProcAddress(m, "NtOpenFile")(&file, SYNCHRONIZE, &oa, &iob, 0, 0x20 /*FILE_SYNCHRONOUS_IO_NONALERT*/) >= 0) {
+    if (GetProcAddress(m, "NtOpenFile")(&file, SYNCHRONIZE, &oa, &iob, 0, 0x20 /*FILE_SYNCHRONOUS_IO_NONALERT*/) >= 0) {
         // DISK_GEOMETRY
         if (GetProcAddress(m, "NtDeviceIoControlFile")(file, NULL, NULL, NULL, &iob, 0x70000 /*IOCTL_DISK_GET_DRIVE_GEOMETRY*/, NULL, 0, b, 24) >= 0) {
             printf("Storage:Cylinders={%08x%08x}\n", *(uint32_t *)&b[4], *(uint32_t *)b);
@@ -171,29 +171,29 @@ void sysinfo_storage(sysinfo_t *ctx, sha1_t *sha1, uint8_t *b)
     }
 
     // Directory: "\\??\\C:\\"
-	((int *)b)[0] = 0x3F005C;
-	((int *)b)[1] = 0x5C003F;
-	((int *)b)[2] = 0x3A003F;
-	*(short *)&b[8] = *(short *)0x7FFE0030; // USER_SHARED_DATA->NtSystemRoot
+    ((int *)b)[0] = 0x3F005C;
+    ((int *)b)[1] = 0x5C003F;
+    ((int *)b)[2] = 0x3A003F;
+    *(short *)&b[8] = *(short *)0x7FFE0030; // USER_SHARED_DATA->NtSystemRoot
     ((int *)b)[3] = 0x5C;
 
-	us.Buffer = (void *)b;
-	us.MaximumLength = us.Length = 14;
+    us.Buffer = (void *)b;
+    us.MaximumLength = us.Length = 14;
 
     oa.Length = sizeof(oa);
     oa.RootDirectory = NULL;
-	oa.ObjectName = &us;
-	oa.Attributes = 0xC0; // OBJ_CASE_INSENSITIVE(0x40) | OBJ_OPENIF(0x80)
+    oa.ObjectName = &us;
+    oa.Attributes = 0xC0; // OBJ_CASE_INSENSITIVE(0x40) | OBJ_OPENIF(0x80)
     oa.SecurityDescriptor = NULL;
     oa.SecurityQualityOfService = NULL;
 
-	if (GetProcAddress(m, "NtOpenFile")(&file, SYNCHRONIZE, &oa, &iob, 0, 0x20 /*FILE_SYNCHRONOUS_IO_NONALERT*/) >= 0) {
-       	// FILE_FS_VOLUME_INFORMATION
+    if (GetProcAddress(m, "NtOpenFile")(&file, SYNCHRONIZE, &oa, &iob, 0, 0x20 /*FILE_SYNCHRONOUS_IO_NONALERT*/) >= 0) {
+           // FILE_FS_VOLUME_INFORMATION
         if (GetProcAddress(m, "NtQueryVolumeInformationFile")(file, &iob, b, 256, 1 /*FileFsVolumeInformation*/) >= 0) {
             printf("Storage:VolumeCreationTime={%08x%08x}\n", *(uint32_t *)&b[4], *(uint32_t *)b);
             ctx->volume_ts = (uint32_t)((*(unsigned __int64 *)b - 116444736000000000) / 10000000);
         }
-	    GetProcAddress(m, "NtClose")(file);
+        GetProcAddress(m, "NtClose")(file);
     }
 }
 
@@ -208,7 +208,7 @@ void sysinfo_parse_smbios_(sysinfo_t *ctx, smbios_t *smbios, uint8_t *p, char **
 
     if (p[0] == 0) {
         // BIOS Information
-		if (p[1] >= 18) { // 2.0+
+        if (p[1] >= 18) { // 2.0+
             crc = 0;
             if (p[4] && p[4] <= text_count) { // Vendor
                 printf("SMBIOS:BIOS Vendor={%s}\n", texts[p[4] - 1]);
@@ -226,13 +226,13 @@ void sysinfo_parse_smbios_(sysinfo_t *ctx, smbios_t *smbios, uint8_t *p, char **
                 crc = crc32(crc, texts[p[8] - 1], strlen(texts[p[8] - 1]));
             }
             ctx->bios_crc = crc;
-		}
+        }
         return;
     }
 
     if (p[0] == 1) {
         // System Information
-   		if (p[1] >= 8) { // 2.0+
+           if (p[1] >= 8) { // 2.0+
             if (p[4] && p[4] <= text_count) { // Manufacturer
                 smbios->system_manufacturer = texts[p[4] - 1];
             }
@@ -244,14 +244,14 @@ void sysinfo_parse_smbios_(sysinfo_t *ctx, smbios_t *smbios, uint8_t *p, char **
             }
             if (p[1] >= 25) { // 2.1+
                 smbios->system_uuid = &p[8];
-			}
-		}
+            }
+        }
         return;
     }
 
     if (p[0] == 2) {
         // Baseboard Information
-		if (p[1] >= 8) { // 2.0+
+        if (p[1] >= 8) { // 2.0+
             if (p[4] && p[4] <= text_count) { // Manufacturer
                 smbios->baseboard_manufacturer = texts[p[4] - 1];
             }
@@ -261,20 +261,20 @@ void sysinfo_parse_smbios_(sysinfo_t *ctx, smbios_t *smbios, uint8_t *p, char **
             if (p[7] && p[7] <= text_count) { // Serial Number
                 smbios->baseboard_serial_number = texts[p[7] - 1];
             }
-		}
+        }
         return;
     }
 
     if (p[0] == 4) {
         // Processor Information
-		if (p[1] >= 25) { // 2.0+
+        if (p[1] >= 25) { // 2.0+
             if (p[7] && p[7] <= text_count) { // Processor Manufacturer
                 smbios->processor_manufacturer = texts[p[7] - 1];
             }
             if (p[16] && p[16] <= text_count) { // Processor Version
                 smbios->processor_version = texts[p[16] - 1];
             }
-		}
+        }
         return;
     }
 
@@ -291,7 +291,7 @@ void sysinfo_parse_smbios_(sysinfo_t *ctx, smbios_t *smbios, uint8_t *p, char **
                 printf("SMBIOS:Memory Part Number={%s}\n", texts[p[26] - 1]);
                 crc = crc32(crc, texts[p[26] - 1], strlen(texts[p[26] - 1]));
             }
-            // ¸Þ¸ð¸®´Â ¼ø¼­¸¦ ¹Ù²ã ²ÈÀ» ¼ö ÀÖÀ¸´Ï±î ´õÇÏ±â
+            // ï¿½Þ¸ð¸®´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù²ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½Ï±ï¿½
             ctx->memory_crc += crc;
         }
         return;
@@ -301,37 +301,37 @@ void sysinfo_parse_smbios_(sysinfo_t *ctx, smbios_t *smbios, uint8_t *p, char **
 void sysinfo_parse_smbios(sysinfo_t *ctx, const void *buf, size_t len)
 {
     uint8_t *p, *end, *data;
-	uint32_t text_count;
+    uint32_t text_count;
     char *texts[16];
     smbios_t smbios;
     sha1_t sha1;
 
     memset(&smbios, 0, sizeof(smbios));
 
-	p = (uint8_t *)buf,
-	end = p + len;
+    p = (uint8_t *)buf,
+    end = p + len;
 
-	while (&p[3] < end && p[1] >= 4) {
-		data = p;
-		p += p[1];
+    while (&p[3] < end && p[1] >= 4) {
+        data = p;
+        p += p[1];
 
-		texts[0] = (char *)p;
+        texts[0] = (char *)p;
         text_count = 1;
 
-		for (;;) {
-			p += strlen((char *)p) + 1;
-			if (*p == 0) {
+        for (;;) {
+            p += strlen((char *)p) + 1;
+            if (*p == 0) {
                 ++p;
                 break;
-			}
+            }
             if (text_count < ARRAYSIZE(texts)) {
-			    texts[text_count] = (char *)p;
+                texts[text_count] = (char *)p;
                 ++text_count;
             }
-		}
+        }
 
         sysinfo_parse_smbios_(ctx, &smbios, data, texts, text_count);
-	}
+    }
 
     sha1_init(&sha1);
     if (smbios.system_manufacturer) {
@@ -392,12 +392,12 @@ void sysinfo_smbios(sysinfo_t *ctx, uint8_t *b)
 
     // SYSTEM_FIRMWARE_TABLE_INFORMATION
     ((int *)b)[0] = 'RSMB'; // ProviderSignature
-	((int *)b)[1] = 1; // Action = SystemFirmwareTableGet
-	((int *)b)[2] = 0; // TableID
-	((int *)b)[3] = 65536 - 16; // TableBufferLength
+    ((int *)b)[1] = 1; // Action = SystemFirmwareTableGet
+    ((int *)b)[2] = 0; // TableID
+    ((int *)b)[3] = 65536 - 16; // TableBufferLength
     
     if (GetProcAddress(m, "NtQuerySystemInformation")(76 /*SystemFirmwareTableInformation*/, b, 65536, b) >= 0) {
-		sysinfo_parse_smbios(ctx, &b[24], *(uint32_t *)&b[20]); // TableBuffer, TableBufferLength
+        sysinfo_parse_smbios(ctx, &b[24], *(uint32_t *)&b[20]); // TableBuffer, TableBufferLength
         return;
     }
 
@@ -412,43 +412,43 @@ void sysinfo_smbios(sysinfo_t *ctx, uint8_t *b)
     strClass = SysAllocString(L"MSSmBios_RawSMBiosTables");
 
     // CLSID_WbemLocator
-	((int *)b)[0] = 0x4590F811;
-	((int *)b)[1] = 0x11D01D3A;
-	((int *)b)[2] = 0xAA001F89;
-	((int *)b)[3] = 0x242E4B00;
+    ((int *)b)[0] = 0x4590F811;
+    ((int *)b)[1] = 0x11D01D3A;
+    ((int *)b)[2] = 0xAA001F89;
+    ((int *)b)[3] = 0x242E4B00;
 
     // IID_IWbemLocator
-	((int *)b)[4] = 0xDC12A687;
-	((int *)b)[5] = 0x11CF737F;
-	((int *)b)[6] = 0xAA004D88;
-	((int *)b)[7] = 0x242E4B00;
+    ((int *)b)[4] = 0xDC12A687;
+    ((int *)b)[5] = 0x11CF737F;
+    ((int *)b)[6] = 0xAA004D88;
+    ((int *)b)[7] = 0x242E4B00;
 
-	if (GetProcAddress(m, "CoInitializeSecurity")(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0 /*EOAC_NONE*/, NULL) == S_OK &&
+    if (GetProcAddress(m, "CoInitializeSecurity")(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0 /*EOAC_NONE*/, NULL) == S_OK &&
         CoCreateInstance((IID *)b, NULL, CLSCTX_INPROC_SERVER, (IID *)&b[16], &locator) == S_OK) {
-		if (locator->lpVtbl->ConnectServer(locator, strNetworkResource, NULL, NULL, NULL, WBEM_FLAG_CONNECT_USE_MAX_WAIT, NULL, NULL, &services) == S_OK) {
-			if (services->lpVtbl->CreateInstanceEnum(services, strClass, WBEM_FLAG_FORWARD_ONLY, NULL, &enumerator) == S_OK) {
+        if (locator->lpVtbl->ConnectServer(locator, strNetworkResource, NULL, NULL, NULL, WBEM_FLAG_CONNECT_USE_MAX_WAIT, NULL, NULL, &services) == S_OK) {
+            if (services->lpVtbl->CreateInstanceEnum(services, strClass, WBEM_FLAG_FORWARD_ONLY, NULL, &enumerator) == S_OK) {
                 VariantInit(&v);
-				while (enumerator->lpVtbl->Next(enumerator, WBEM_INFINITE, 1, &object, &objects) == S_OK) {
-					if (object->lpVtbl->Get(object, L"SMBiosData", 0, &v, NULL, NULL) == S_OK) {
+                while (enumerator->lpVtbl->Next(enumerator, WBEM_INFINITE, 1, &object, &objects) == S_OK) {
+                    if (object->lpVtbl->Get(object, L"SMBiosData", 0, &v, NULL, NULL) == S_OK) {
                         if (v.vt == (VT_ARRAY | VT_UI1) &&
                             v.parray->cDims &&
                             v.parray->rgsabound[0].cElements) {
-							sysinfo_parse_smbios(ctx, v.parray->pvData, v.parray->rgsabound[0].cElements);
+                            sysinfo_parse_smbios(ctx, v.parray->pvData, v.parray->rgsabound[0].cElements);
                         }
-						VariantClear(&v);
-					}
-					object->lpVtbl->Release(object);
-				}
-				enumerator->lpVtbl->Release(enumerator);
-			}
-			services->lpVtbl->Release(services);
-		}
-		locator->lpVtbl->Release(locator);
-	}
+                        VariantClear(&v);
+                    }
+                    object->lpVtbl->Release(object);
+                }
+                enumerator->lpVtbl->Release(enumerator);
+            }
+            services->lpVtbl->Release(services);
+        }
+        locator->lpVtbl->Release(locator);
+    }
 
     SysFreeString(strClass);
     SysFreeString(strNetworkResource);
-	GetProcAddress(m, "CoUninitialize")();
+    GetProcAddress(m, "CoUninitialize")();
 }
 
 void sysinfo_mac(sysinfo_t *ctx, uint8_t *b)
@@ -466,27 +466,27 @@ void sysinfo_mac(sysinfo_t *ctx, uint8_t *b)
     }
 
     fw_row = (MIB_IPFORWARDROW *)b;
-	if (GetProcAddress(m, "GetBestRoute")(0, 0, fw_row) == NO_ERROR) {
-		addr = fw_row->dwForwardNextHop;
-		index = fw_row->dwForwardIfIndex;
+    if (GetProcAddress(m, "GetBestRoute")(0, 0, fw_row) == NO_ERROR) {
+        addr = fw_row->dwForwardNextHop;
+        index = fw_row->dwForwardIfIndex;
         if_row = (MIB_IFROW *)b;
-		if_row->dwIndex = index;
-		if (GetProcAddress(m, "GetIfEntry")(if_row) == NO_ERROR) {
-			memcpy(ctx->net_addr, if_row->bPhysAddr, if_row->dwPhysAddrLen);
-			*(ULONG *)b = 65536 - 4;
+        if_row->dwIndex = index;
+        if (GetProcAddress(m, "GetIfEntry")(if_row) == NO_ERROR) {
+            memcpy(ctx->net_addr, if_row->bPhysAddr, if_row->dwPhysAddrLen);
+            *(ULONG *)b = 65536 - 4;
             ip_table = (MIB_IPNETTABLE *)&b[4];
-			if (GetProcAddress(m, "GetIpNetTable")(ip_table, b, FALSE) == NO_ERROR) {
+            if (GetProcAddress(m, "GetIpNetTable")(ip_table, b, FALSE) == NO_ERROR) {
                 ip_row = ip_table->table;
-				for (i = ip_table->dwNumEntries; i; ++ip_row, --i) {
-					if (ip_row->dwIndex == index &&
+                for (i = ip_table->dwNumEntries; i; ++ip_row, --i) {
+                    if (ip_row->dwIndex == index &&
                         ip_row->dwAddr == addr) {
-						memcpy(ctx->gateway_addr, ip_row->bPhysAddr, ip_row->dwPhysAddrLen);
-						break;
-					}
-				}
-			}
-		}
-	}
+                        memcpy(ctx->gateway_addr, ip_row->bPhysAddr, ip_row->dwPhysAddrLen);
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     FreeLibrary(m);
 }
@@ -494,17 +494,17 @@ void sysinfo_mac(sysinfo_t *ctx, uint8_t *b)
 // Retrieves System Info
 void sysinfo_resolve(sysinfo_t *ctx)
 {
-	uint8_t *b;
+    uint8_t *b;
     sha1_t sha1;
 
     memset(ctx, 0,sizeof(*ctx));
 
     b = malloc(65536);
-	if (b == NULL) {
+    if (b == NULL) {
         return;
     }
 
-	sysinfo_cpu(ctx, b);
+    sysinfo_cpu(ctx, b);
     sysinfo_os(ctx, b);
 
     sha1_init(&sha1);
@@ -514,56 +514,56 @@ void sysinfo_resolve(sysinfo_t *ctx)
     sysinfo_smbios(ctx, b);
     sysinfo_mac(ctx, b);
 
-	free(b);
+    free(b);
 }
 
 #if 0
 /*__declspec(noinline)*/ BOOL pe_checksum(HMODULE m)
 {
-	BOOL result = FALSE;
-	const uint8_t *p = (uint8_t *)NtCurrentTeb();
-	p = *(uint8_t **)&p[sizeof(p) * 12]; // TEB->PEB
-	p = *(uint8_t **)&p[sizeof(p) * 3]; // PEB->PEB_LDR_DATA
-	p = *(uint8_t **)&p[sizeof(p) * 3 + 8]; // PEB_LDR_DATA->InMemoryOrderModuleList.FLink
-	if (m)
-		while (*(HMODULE *)&p[sizeof(p) * 4] != m) // LDR_MODULE->BaseAddress
-			p = *(uint8_t **)p; // InMemoryOrderModuleList.FLink
-	else
-		m = *(HMODULE *)&p[sizeof(p) * 4];
-	{
-		HANDLE file = CreateFileW(*(const wchar_t **)&p[sizeof(void *) * 8], GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (file != INVALID_HANDLE_VALUE) {
-			DWORD size = GetFileSize(file, NULL);
-			if (size && size != INVALID_FILE_SIZE) {
-				HANDLE mapping = CreateFileMapping(file, NULL, PAGE_READONLY, 0, 0, NULL);
-				if (mapping) {
-					LPVOID base = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
-					if (base) {
-						DWORD i = 0;
-						WORD *ptr = base,
-							*end_ptr = &ptr[size >> 1];
-						while (ptr < end_ptr) {
-							i += *ptr++;
-							i = (i >> 16) + (WORD)i;
-						}
-						i = (WORD)(i + (i >> 16));
-						{
-							DWORD j = ((IMAGE_NT_HEADERS *)((char *)m + ((IMAGE_DOS_HEADER *)m)->e_lfanew))->OptionalHeader.CheckSum;
-							i = (WORD)(i - (i < (WORD)j));
-							i = (WORD)(i - (WORD)j);
-							i = (WORD)(i - (i < (j >> 16)));
-							i = (WORD)(i - (j >> 16));
-							result = size == j - i;
-						}
-						UnmapViewOfFile(base);
-					}
-					CloseHandle(mapping);
-				}
-			}
-			CloseHandle(file);
-		}
-	}
-	return result;
+    BOOL result = FALSE;
+    const uint8_t *p = (uint8_t *)NtCurrentTeb();
+    p = *(uint8_t **)&p[sizeof(p) * 12]; // TEB->PEB
+    p = *(uint8_t **)&p[sizeof(p) * 3]; // PEB->PEB_LDR_DATA
+    p = *(uint8_t **)&p[sizeof(p) * 3 + 8]; // PEB_LDR_DATA->InMemoryOrderModuleList.FLink
+    if (m)
+        while (*(HMODULE *)&p[sizeof(p) * 4] != m) // LDR_MODULE->BaseAddress
+            p = *(uint8_t **)p; // InMemoryOrderModuleList.FLink
+    else
+        m = *(HMODULE *)&p[sizeof(p) * 4];
+    {
+        HANDLE file = CreateFileW(*(const wchar_t **)&p[sizeof(void *) * 8], GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (file != INVALID_HANDLE_VALUE) {
+            DWORD size = GetFileSize(file, NULL);
+            if (size && size != INVALID_FILE_SIZE) {
+                HANDLE mapping = CreateFileMapping(file, NULL, PAGE_READONLY, 0, 0, NULL);
+                if (mapping) {
+                    LPVOID base = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
+                    if (base) {
+                        DWORD i = 0;
+                        WORD *ptr = base,
+                            *end_ptr = &ptr[size >> 1];
+                        while (ptr < end_ptr) {
+                            i += *ptr++;
+                            i = (i >> 16) + (WORD)i;
+                        }
+                        i = (WORD)(i + (i >> 16));
+                        {
+                            DWORD j = ((IMAGE_NT_HEADERS *)((char *)m + ((IMAGE_DOS_HEADER *)m)->e_lfanew))->OptionalHeader.CheckSum;
+                            i = (WORD)(i - (i < (WORD)j));
+                            i = (WORD)(i - (WORD)j);
+                            i = (WORD)(i - (i < (j >> 16)));
+                            i = (WORD)(i - (j >> 16));
+                            result = size == j - i;
+                        }
+                        UnmapViewOfFile(base);
+                    }
+                    CloseHandle(mapping);
+                }
+            }
+            CloseHandle(file);
+        }
+    }
+    return result;
 }
 #endif
 
